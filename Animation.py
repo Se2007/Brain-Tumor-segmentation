@@ -4,12 +4,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import h5py
+import imageio
 
 csv_path = "./Dataset/BraTS20 Training Metadata.csv"
 
 train_df = pd.read_csv(csv_path)
 
-paths = train_df[train_df['volume'] == 20]['slice_path'].values.tolist()
+idx = int(input('MRI scans of which patient : '))
+
+paths = train_df[train_df['volume'] == idx]['slice_path'].values.tolist()
 images = []
 masks = []
 for idx, path in enumerate(paths):
@@ -32,25 +35,40 @@ def overlay_masks_on_image(image, mask):
     
     return rgb_image
 
+image_lst = []
 for image, mask in zip(images, masks) :
     mask_image = overlay_masks_on_image(image, mask)
     image = image[0, :, :]
-    # mask = mask_trasform(rle2mask([sample.iloc[0]['height'], sample.iloc[0]['weidth']], [sample.iloc[0]['large_bowel'], sample.iloc[0]['small_bowel'], sample.iloc[0]['stomach']]))
 
-    # out = image.permute(1,2,0).numpy() + mask.permute(1,2,0).numpy() * 0.55
-
-
-       
-    # frame_rgb = (out * 255).astype(np.uint8)
-    # image_lst.append(frame_rgb)
     array_normalized = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     colored_image = cv2.applyColorMap(array_normalized, cv2.COLORMAP_MAGMA)
 
-    cv2.imshow('R', colored_image)
-    cv2.imshow('Red : large_bowel -- Green : small_bowel -- Blue : stomach', mask_image)
+    scale_factor = 3
+    new_size = (colored_image.shape[1] * scale_factor, colored_image.shape[0] * scale_factor)
+    
+    colored_image_resized = cv2.resize(colored_image, new_size, interpolation=cv2.INTER_CUBIC)
+    mask_image_resized = cv2.resize(mask_image, new_size, interpolation=cv2.INTER_CUBIC)
+
+    frame_rgb = cv2.cvtColor((mask_image_resized * 255).astype(np.uint8), cv2.COLOR_BGR2RGB)
+    image_lst.append(frame_rgb)
+    # if mask_image_resized.dtype != np.uint8:
+    #     mask_image_resized = mask_image_resized.astype(np.uint8)
+
+    # frame_rgb = cv2.cvtColor(mask_image_resized, cv2.COLOR_BGR2RGB)  # Convert to RGB
+    # image_lst.append(frame_rgb)
+
+    title_colored = 'Brain MRI Scans'
+    title_mask = 'Red : Necrotic - Green : Edema - Blue : Tumour'
+
+    cv2.putText(colored_image_resized, title_colored, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(mask_image_resized, title_mask, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+
+
+    cv2.imshow('Brain MRI Scans', colored_image_resized)
+    cv2.imshow('Red : Necrotic -- Green : Edema -- Blue : Tumour', mask_image_resized)
     cv2.waitKey(100)
 
 
 ## for making the Gif, have to install imageio
 
-# imageio.mimsave('./v.gif', image_lst)
+# imageio.mimsave('./11v.gif', image_lst)
