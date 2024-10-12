@@ -136,8 +136,7 @@ if __name__=='__main__':
     img, mask = next(iter(dataloader))
     print(mask.shape, img.shape)
 
-    # plt.imshow(img[0][0])
-    # plt.show()
+    ## showing the image and mask
 
     fig, axes = plt.subplots(1, 4, figsize=(12, 5))  # 1 row, 2 columns
 
