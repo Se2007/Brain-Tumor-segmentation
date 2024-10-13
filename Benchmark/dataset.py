@@ -20,6 +20,7 @@ import h5py
 class BraTS20_dataset(Dataset):
     def __init__(self, csv_file_path, memory=False): # transforms, 
         self.csv_file = pd.read_csv(csv_file_path)
+        self.path = csv_file_path.split('/')
         # self.transforms = transforms
 
         self.memory = memory
@@ -35,7 +36,7 @@ class BraTS20_dataset(Dataset):
 
         if self.memory :
             image = self.imgs[index] 
-            mask = self._mask_generator(self.masks[index])#tv_tensors.Mask(self._mask_generator(self.masks[index]) )
+            mask = self.masks[index]#tv_tensors.Mask(self._mask_generator(self.masks[index]) )
 
         else :
             result = self._load(self._path_loader(sample['slice_path']))
@@ -60,7 +61,7 @@ class BraTS20_dataset(Dataset):
         for path in self.csv_file['slice_path']:
             sample = self._load(self._path_loader(path))
             self.imgs.append(sample[0])
-            self.masks.append(sample[1])
+            self.masks.append(self._mask_generator(sample[1]))
 
 
     def _load(self, path):
@@ -71,7 +72,7 @@ class BraTS20_dataset(Dataset):
         return image, mask #tv_tensors.Image(image), mask 
 
     def _path_loader(self, x):
-        return './Dataset' + x[32:]
+        return './' + self.path[1] + x[32:] #'/' + self.path[2] +
     
     def _mask_generator(self, x):
         combined_array = np.sum(x, axis=0)
@@ -132,7 +133,7 @@ if __name__=='__main__':
 
     print('---------------------------')
 
-    dataloader = BraTS20(csv_path, 'train', mini=False, memory=False)(batch_size=32)
+    dataloader = BraTS20(csv_path, 'train', mini=False, memory=True)(batch_size=32)
     img, mask = next(iter(dataloader))
     print(mask.shape, img.shape)
 
