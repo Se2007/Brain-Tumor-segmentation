@@ -1,4 +1,8 @@
 Dataset/
+saved_model/
+wandb-key.txt
+wandb/
 __pycache__/
 *.rar
 *.zip
+*.csv

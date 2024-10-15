@@ -3,6 +3,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import DataLoader, random_split
 from torchvision.transforms import v2
 from torchvision import tv_tensors
+import torch.nn.functional as F
 
 import pandas as pd
 import numpy as np
@@ -18,9 +19,10 @@ import h5py
 
 
 class BraTS20_dataset(Dataset):
-    def __init__(self, csv_file_path, memory=False): # transforms, 
+    def __init__(self, csv_file_path, memory=False, new_size = 256): # transforms, 
         self.csv_file = pd.read_csv(csv_file_path)
         self.path = csv_file_path.split('/')
+        self.new_size = new_size
         # self.transforms = transforms
 
         self.memory = memory
@@ -53,6 +55,17 @@ class BraTS20_dataset(Dataset):
         image = torch.tensor(image, dtype=torch.float32)
         mask = torch.tensor(mask, dtype=torch.float32)
 
+        # image = F.interpolate(image.unsqueeze(0), size=(256, 256), mode='bilinear', align_corners=False).squeeze(0)
+        # mask = F.interpolate(mask.unsqueeze(0), size=(256, 256), mode='nearest').squeeze(0)
+
+        if self.new_size > 240:
+            pad_value = (self.new_size - 240) // 2
+            pad_values = (pad_value, pad_value, pad_value, pad_value)  # To make 240 -> 256
+
+            # Apply padding (constant padding of zeros, or you can choose another value)
+            image = F.pad(image, pad_values, mode='constant', value=0)
+            mask = F.pad(mask, pad_values, mode='constant', value=0)
+
         return image, mask 
     
     def _save_memory(self):
@@ -72,7 +85,7 @@ class BraTS20_dataset(Dataset):
         return image, mask #tv_tensors.Image(image), mask 
 
     def _path_loader(self, x):
-        return './' + self.path[1] + x[32:] #'/' + self.path[2] +
+        return  './' + self.path[1] + '/' + 'Dataset' +  x[32:] #
     
     def _mask_generator(self, x):
         combined_array = np.sum(x, axis=0)
@@ -89,14 +102,14 @@ class BraTS20(object):
         self.mini = mini  
         self.memory = memory
 
-        # if mode == 'train' :
-        #     self.path_dataset = root + "/train.csv"
-        # elif mode == 'valid':
-        #     self.path_dataset = root + "/valid.csv"
-        # elif mode == 'test' :
-        #     self.path_dataset = root + "/test.csv"
+        if mode == 'train' :
+            self.path_dataset = root + "/train.csv"
+        elif mode == 'valid':
+            self.path_dataset = root + "/val.csv"
+        elif mode == 'test' :
+            self.path_dataset = root + "/test.csv"
 
-        self.path_dataset = root
+        # self.path_dataset = root
 
 
     def __call__(self, batch_size) :
@@ -116,6 +129,7 @@ class BraTS20(object):
 
 if __name__=='__main__':
     csv_path = "./Dataset/BraTS20 Training Metadata.csv"
+    path = '.'
 
     # dataloader = UW_madison(root='./UW_madison_dataset', mode='train', mini=True, memory=True)(batch_size=32)
 
@@ -133,7 +147,7 @@ if __name__=='__main__':
 
     print('---------------------------')
 
-    dataloader = BraTS20(csv_path, 'train', mini=False, memory=True)(batch_size=32)
+    dataloader = BraTS20(path, 'train', mini=False, memory=False)(batch_size=32)
     img, mask = next(iter(dataloader))
     print(mask.shape, img.shape)
 

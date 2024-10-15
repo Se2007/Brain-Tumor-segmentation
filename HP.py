@@ -3,9 +3,9 @@ from torch import nn
 from torch import optim
 from torchmetrics import Dice
 import segmentation_models_pytorch as smp
-from loss.loss import Criterion
+# from loss.loss import Criterion
 
-from benchmark import dataset
+from Benchmark import dataset
 from utils import train_one_epoch
 from methods.unet import UNet, pre_train_unet
 from methods.unetplusplus import UnetPlusPlus
@@ -38,8 +38,8 @@ def load(model, device='cpu', reset = False, load_path = None):
 device = 'cuda'
 num_epochs = 5
 reset = True
-
-train_loader = dataset.UW_madison(root='./benchmark/UW_madison_dataset', mode='train', mini=True, memory=False)(batch_size=20)
+# BraTS20 Training Metadata.csv
+train_loader = dataset.BraTS20("./Benchmark", 'train', mini=True, memory=False)(batch_size=32)
 
 load_path = './saved_model/'+'unet-with-dropout'+ ".pth"
 
@@ -47,7 +47,7 @@ load_path = './saved_model/'+'unet-with-dropout'+ ".pth"
 #   Hyperparameters   #
 #######################
 
-learning_rates = [0.8,  1]
+learning_rates = [0.08 , 0.1, 0.3]
 weight_decays = [1e-2, 1e-4, 1e-6]
 
 ## preprocessing for makeing the table and finding the minimums
@@ -67,8 +67,8 @@ table.field_names = ["LR \ WD"] + [f"WD {i}" for i in weight_decays]
 
 metric = Dice().to(device)
 
-# loss_fn = smp.losses.DiceLoss(mode='multilabel')
-loss_fn = Criterion()
+loss_fn = smp.losses.DiceLoss(mode='multilabel')
+# loss_fn = Criterion()
 
 
 for lr in learning_rates:
@@ -78,15 +78,15 @@ for lr in learning_rates:
 
         ## Model and Optimizer
         
-        # model = UNet(n_channels=3, n_classes=3, bilinear=False).to(device)
+        # model = UNet(n_channels=4, n_classes=4, bilinear=False).to(device)
 
-        # model = pre_train_unet(encoder_name='timm-regnety_008').to(device)
+        model = pre_train_unet(in_channels=4, classes=4, encoder_name='efficientnet-b1').to(device)
 
         # model = UnetPlusPlus(encoder_name='efficientnet-b3').to(device)
 
         # model = DeepLab(encoder_name='efficientnet-b1').to(device)
 
-        model = TransUNet(img_dim=224, in_channels=3, class_num=3).to(device)
+        # model = TransUNet(img_dim=224, in_channels=3, class_num=3).to(device)
 
         ### Calculate the amount of parameters
         print(sum(p.numel() for p in model.parameters()))
