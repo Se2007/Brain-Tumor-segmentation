@@ -63,10 +63,24 @@ class BraTS20_dataset(Dataset):
             pad_values = (pad_value, pad_value, pad_value, pad_value)  # To make 240 -> 256
 
             # Apply padding (constant padding of zeros, or you can choose another value)
+            mask = self._padding(mask, pad_values)
             image = F.pad(image, pad_values, mode='constant', value=0)
-            mask = F.pad(mask, pad_values, mode='constant', value=0)
+            # mask = F.pad(mask, pad_values, mode='constant', value=0)
 
-        return image, mask 
+        return image, mask
+    
+    def _padding(self, mask, pad_values):
+        first_channel = mask[-1]  # First channel of the mask
+        # print(pad_values[0], first_channel.shape)
+        padded_first_channel = F.pad(first_channel, pad_values, mode='constant', value=1)
+        
+        # Stack the padded first channel back with the remaining channels
+        rest_channels = mask[:-1]  
+        padded_rest_channel = F.pad(rest_channels, pad_values, mode='constant', value=0)
+
+        padded_mask = torch.cat([padded_rest_channel, padded_first_channel.unsqueeze(0)], dim=0)
+        
+        return padded_mask
     
     def _save_memory(self):
         self.imgs = []
@@ -75,7 +89,6 @@ class BraTS20_dataset(Dataset):
             sample = self._load(self._path_loader(path))
             self.imgs.append(sample[0])
             self.masks.append(self._mask_generator(sample[1]))
-
 
     def _load(self, path):
         with h5py.File(path, 'r') as file:
